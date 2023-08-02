@@ -1,0 +1,110 @@
+#!/bin/sh
+
+function add_user()
+{
+  # group
+  read -p "Please input group:" group
+
+  if [ "x$group" = "x" ]; then
+    group=developer
+  fi
+
+  # create group if not exists
+  grep "^$group" /etc/group >& /dev/null
+  if [ $? -ne 0 ]; then
+    groupadd $group
+    echo -e "[Group] => \033[31;5m$group\033[0m"
+  else
+    echo "[Group: $group] has been already existed! "
+  fi
+
+  # user setting
+  read -p "Please input user:" user
+
+  if [ "x$user" = "x" ]; then
+    echo "You must input user!"
+    exit
+  fi
+
+  # create user if not exists
+  grep "^$user" /etc/passwd >& /dev/null
+  if [ $? -ne 0 ]; then
+    useradd -s /bin/bash -m -d /home/$user -g $group $user
+    echo -e "[User] => \033[31;5m$user\033[0m"
+  else
+    echo "[User: $user] has been already existed! "
+  fi
+
+  # password setting
+  echo -e "[Password] => \033[31;5m$user@jshcbd.cn\033[0m"
+  echo "$user":"$user@jshcbd.cn" | chpasswd
+}
+
+function delete_user()
+{
+  read -p "Please input user for removing:" user
+
+  if [ "x$user" = "x" ]; then
+    echo "You must input user!"
+    exit
+  fi
+
+  grep "^$user" /etc/passwd >& /dev/null
+  if [ $? -ne 0 ]; then
+    echo "[User: $user] is not existed! "
+    exit
+  else
+    read -p "Are you sure delete the user? [yes or y]" delete_user_flag
+    if [[ "$delete_user_flag" == "yes" || "$delete_user_flag" == "y" ]]; then
+      userdel -r $user
+      echo -e "[User: \033[31;5m$user\033[0m] has been deleted! "
+    fi
+  fi
+}
+
+function change_password()
+{
+  read -p "Please input user for changing password:" user
+
+  if [ "x$user" = "x" ]; then
+    echo "You must input user!"
+    exit
+  fi
+
+  grep "^$user" /etc/passwd >& /dev/null
+  if [ $? -ne 0 ]; then
+    echo "[User: $user] is not existed! "
+    exit
+  else
+    read -p "Please input user password:" password
+    if [ "x$password" = "x" ]; then
+      echo "You must input password!"
+      exit
+    else
+      echo "$user":"$password" | chpasswd
+      echo -e "[password] => \033[31;5m$password\033[0m"
+    fi
+    echo -e "[User: \033[31;5m$user\033[0m] password has been changed! "
+  fi
+}
+
+case $1 in
+
+"add-user")
+  add_user
+  ;;
+
+"delete-user")
+  delete_user
+  ;;
+
+"change-passwd")
+  change_password
+  ;;
+
+*)
+  echo Invalid Args!
+  echo 'Usage: '$(basename $0)' add-user|delete-user|change-passwd'
+  ;;
+
+esac
