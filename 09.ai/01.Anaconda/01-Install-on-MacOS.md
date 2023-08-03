@@ -2,7 +2,9 @@
 
 ## 标准下载
 
-​		Anaconda官方下载地址为：https://www.anaconda.com/。如果你的Mac是M1芯片点击【Download for Mac（**M1/M2**）】下载，如果是英特尔芯片则点击【Download for Mac（**Intel**）】。下载之后是一个.pkg后缀名的压缩包。
+​		Anaconda官方下载地址为：https://www.anaconda.com/。
+
+​		如果你的Mac是M1芯片点击【Download for Mac（**M1/M2**）】下载，如果是英特尔芯片则点击【Download for Mac（**Intel**）】。下载之后是一个.pkg后缀名的压缩包。
 
 ## 扩展下载
 
