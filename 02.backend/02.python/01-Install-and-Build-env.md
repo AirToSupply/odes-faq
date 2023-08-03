@@ -12,7 +12,9 @@ conda create -n dev python=3.7
 
 # 构建Python IDE集成开发环境（MacOS）
 
-​		推荐下载PyCharm社区版本，因为免费，官方链接如下：https://www.jetbrains.com/pycharm/download/?section=mac，如果Apple M1芯片点击.dmg(Apple Silicon)。下载之后双击即可启动IDE。
+​		推荐下载PyCharm社区版本，因为免费，官方链接如下：https://www.jetbrains.com/pycharm/download/?section=mac
+
+​		如果Apple M1芯片点击.dmg(Apple Silicon)。下载之后双击即可启动IDE。
 
 ​		在通过PyCharm创建Python项目之前，需要根据需求创建当前虚拟环境，比如：我们希望有一个python3.7的环境，假设环境的名称为dev：
 
