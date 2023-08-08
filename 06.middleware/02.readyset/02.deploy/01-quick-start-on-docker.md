@@ -76,6 +76,17 @@ psql "postgresql://postgres:readyset@127.0.0.1:5433/testdb"
 
 # 测试验证
 
+​		测试的SQL语句如下，尝试将20w数据量的表和40w数据量的表进行关联。
+
+```shell
+SELECT count(*) 
+  FROM title_ratings
+  JOIN title_basics 
+    ON title_ratings.tconst = title_basics.tconst
+ WHERE title_basics.startyear = 2000 
+   AND title_ratings.averagerating > 5;
+```
+
 ​		直连数据库进行测试：
 
 ```shell
