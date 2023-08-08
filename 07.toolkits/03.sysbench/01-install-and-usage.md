@@ -20,7 +20,11 @@ brew install sysbench
 sysbench --version
 ```
 
-# 二.测试案例-数据库性能压测
+# 二.基本使用
+
+​		参考：[MySQL 性能压测工具-sysbench，从入门到自定义测试项](https://www.cnblogs.com/ivictor/p/16955580.html)
+
+# 三.测试案例-数据库性能压测
 
 ​		【硬件环境】Linux Version: CentOS 7.x；Memory: 300GB；Disk: 8T。
 
@@ -207,3 +211,68 @@ oltp_read_write cleanup
 ```sql
 DROP DATABASE test_db;
 ```
+
+## PS：对于数据库测试用例的解读
+
+​		sysbench为数据库压力测试提供了非常多的测试用例（主要偏TP类型），这些测试用例基于lua语言进行封装，默认存储在/usr/local/share/sysbench目录下。
+
+```shell
+> cd /usr/local/share/sysbench
+> ll
+
+-rwxr-xr-x  1 tangch  admin   1.4K  4 24  2020 bulk_insert.lua
+-rw-r--r--  1 tangch  admin    14K  4 24  2020 oltp_common.lua
+-rwxr-xr-x  1 tangch  admin   1.3K  4 24  2020 oltp_delete.lua
+-rwxr-xr-x  1 tangch  admin   2.4K  4 24  2020 oltp_insert.lua
+-rwxr-xr-x  1 tangch  admin   1.2K  4 24  2020 oltp_point_select.lua
+-rwxr-xr-x  1 tangch  admin   1.6K  4 24  2020 oltp_read_only.lua
+-rwxr-xr-x  1 tangch  admin   1.8K  4 24  2020 oltp_read_write.lua
+-rwxr-xr-x  1 tangch  admin   1.1K  4 24  2020 oltp_update_index.lua
+-rwxr-xr-x  1 tangch  admin   1.1K  4 24  2020 oltp_update_non_index.lua
+-rwxr-xr-x  1 tangch  admin   1.4K  4 24  2020 oltp_write_only.lua
+-rwxr-xr-x  1 tangch  admin   1.9K  4 24  2020 select_random_points.lua
+-rwxr-xr-x  1 tangch  admin   2.1K  4 24  2020 select_random_ranges.lua
+drwxr-xr-x  5 tangch  admin   160B  8  8 09:39 tests
+```
+
+​		各种测试用例都是通过oltp_common.lua这个脚本进行抽离和封装。对于sysbench来说定义的测试用例相对**泛化**，当然可以自定义那么需要修改这些lua脚本来达到测试预期。
+
+​		默认情况下对于除了bulk_insert用例来说会创建单独的测试表，其它场景都会使用下面的表结构：
+
+```sql
+CREATE TABLE `sbtest%u` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `k` int NOT NULL DEFAULT '0',
+  `c` char(120) NOT NULL DEFAULT '',
+  `pad` char(60) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `k_%u` (`k`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+​		只有bulk_insert用例是采用如下表结构：
+
+```sql
+CREATE TABLE `sbtest%u` (
+  `id` int NOT NULL,
+  `k` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+​		对于默认场景下每个场景的基本情况如下：
+
+| 测试用例              | 测试描述                     | 读   | 写   | 测试详情                                                     |
+| --------------------- | ---------------------------- | ---- | ---- | ------------------------------------------------------------ |
+| bulk_insert           | **批量**插入                 |      | ✅    | ```INSERT INTO sbtest%u VALUES(?, ?),(?, ?),(?, ?),(?, ?);``` |
+| oltp_delete           | 基于**主键**删除             |      | ✅    | ```DELETE FROM sbtest%u WHERE id=?;```                       |
+| oltp_insert           | 插入测试                     |      | ✅    | ```INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?);``` |
+| oltp_point_select     | 基于主键查询                 | ✅    |      | ```SELECT c FROM sbtest%u WHERE id=?;```                     |
+| oltp_read_only        | **只读**测试                 | ✅    |      | ```SELECT c FROM sbtest%u WHERE id=?; -- 默认会执行 10 次，由 --point_selects 选项控制```<br/>```SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?;```<br/>```SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?;```<br/>```SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c;```<br/>```SELECT DISTINCT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c;``` |
+| oltp_read_write       | 读写测试                     | ✅    | ✅    | ```SELECT c FROM sbtest%u WHERE id=?; -- 默认会执行 10 次，由 --point_selects 选项控制```<br/>```SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ?;```<br/>```SELECT SUM(k) FROM sbtest%u WHERE id BETWEEN ? AND ?;```<br/>```SELECT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c;```<br/>```SELECT DISTINCT c FROM sbtest%u WHERE id BETWEEN ? AND ? ORDER BY c;```<br/>```UPDATE sbtest%u SET k=k+1 WHERE id=?;```<br/>```UPDATE sbtest%u SET c=? WHERE id=?;```<br/>```DELETE FROM sbtest%u WHERE id=?;```<br/>```INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?);``` |
+| oltp_update_index     | 基于主键更新(更新索引字段)   |      | ✅    | ```UPDATE sbtest%u SET k=k+1 WHERE id=?;```                  |
+| oltp_update_non_index | 基于主键更新(更新非索引字段) |      | ✅    | ···UPDATE sbtest%u SET c=? WHERE id=?;```                    |
+| oltp_write_only       | **只写**测试                 |      | ✅    | ```UPDATE sbtest%u SET k=k+1 WHERE id=?;```<br/>```UPDATE sbtest%u SET c=? WHERE id=?;```<br/>```DELETE FROM sbtest%u WHERE id=?;```<br/>```INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?);``` |
+| select_random_points  | 基于**索引随机**查询         | ✅    |      | ```SELECT id, k, c, pad FROM sbtest%u WHERE k IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);``` |
+| select_random_ranges  | 基于**索引随机范围**查询     | ✅    |      | ```SELECT count(k)```<br/>```  FROM sbtest%u```<br/>``` WHERE k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ?;``` |
+
