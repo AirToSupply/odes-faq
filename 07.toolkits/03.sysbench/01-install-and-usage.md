@@ -275,4 +275,3 @@ CREATE TABLE `sbtest%u` (
 | oltp_write_only       | **只写**测试                 |      | ✅    | ```UPDATE sbtest%u SET k=k+1 WHERE id=?;```<br/>```UPDATE sbtest%u SET c=? WHERE id=?;```<br/>```DELETE FROM sbtest%u WHERE id=?;```<br/>```INSERT INTO sbtest%u (id, k, c, pad) VALUES (?, ?, ?, ?);``` |
 | select_random_points  | 基于**索引随机**查询         | ✅    |      | ```SELECT id, k, c, pad FROM sbtest%u WHERE k IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);``` |
 | select_random_ranges  | 基于**索引随机范围**查询     | ✅    |      | ```SELECT count(k)```<br/>```  FROM sbtest%u```<br/>``` WHERE k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ? OR ```<br/>```       k BETWEEN ? AND ?;``` |
-
