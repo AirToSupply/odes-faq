@@ -1,8 +1,10 @@
-# 前置准备
+# 容器化部署和测试验证
+
+​		该部署方式用于容器化环境下的快速部署。下面通过readyset代理到postgres数据库为例，且部署模式为本地local（数据库容器和readyset容器在同一个服务器中）。
 
 ## 一.启动数据库
 
-​		这里尝试启动一个postgres数据库：
+​		readyset服务启动重要的先觉条件是基于一个已经存在的数据库。这里尝试通过readyset连接postgres数据库为例，现在通过Docker启动postgres服务。
 
 ```shell
 docker run -d \
@@ -16,30 +18,38 @@ postgres:14 \
 
 【注意】
 
-​		（1）postgres版本推荐至少是14。
+​		（1）对于readyset侧来说，推荐postgres数据库版本推荐至少是14+，postgres版本13版本以下并未验证。
 
-​		（2）必须开启postgres binlog，设置参数wal_level为logical。
+​		（2）被readyset服务所代理的postgres数据库必须开启binlog，因为readyset在启动之后需要复制数据库的replica stream（可以理解为数据库binlog event事件），对于Docker化部署需要设置参数**wal_level**为**logical**。
 
 ​		
 
-​		通过Docker容器本地启动数据库之后，通过客户端命令验证数据库是否可以连通：
+​		启动数据库之后，通过客户端命令验证数据库是否可以连通，这里连接所创建的testdb数据库。
 
 ```shell
 psql "postgresql://postgres:readyset@127.0.0.1:5432/testdb"
 ```
 
+​		如果当前节点没有postgres数据库客户端工具，需要优先下载，具体各个平台安装可以参考：[《Packages and Installers》](https://www.postgresql.org/download/)。
+
+```shell
+# MacOS
+brew install postgresql@15
+# Ubuntu/Debian
+apt-get install postgresql-client
+# CentOS（这里安装的PG13版本的源，所以指定下版本，若不指定版本则会安装9.2版本）
+yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+yum install postgresql13 -y
+```
+
 ## 二.准备数据集
 
 ```shell
-curl -O https://github.com/readysettech/docs/blob/main/docs/assets/imdb-postgres.sql && 
+curl -O https://github.com/readysettech/docs/blob/main/docs/assets/imdb-postgres.sql
 psql "postgresql://postgres:readyset@127.0.0.1:5432/testdb" -f imdb-postgres.sql
 ```
 
-
-
-# 容器化部署
-
-​		通过如下命令启动：
+## 三.启动服务
 
 ```shell
 docker run -d \
@@ -66,17 +76,15 @@ public.ecr.aws/readyset/readyset:beta-2023-07-26 \
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <CONTAINER_ID>
 ```
 
-​		由于是在单台机器进行实验，为了防止和postgres数据库端口冲突，readyset服务端口设置为5433。启动之后通过如下命令验证readyset连通性：
+​		由于是在单台机器进行实验，为了防止和postgres数据库端口冲突，这里readyset服务端口设置为5433。启动之后通过如下命令验证readyset连通性：
 
 ```shell
 psql "postgresql://postgres:readyset@127.0.0.1:5433/testdb"
 ```
 
-## 
+## 四.测试验证
 
-# 测试验证
-
-​		测试的SQL语句如下，尝试将20w数据量的表和40w数据量的表进行关联。
+​		在本小节【准备数据集】提供的数据集下尝试如下查询测试，这段逻辑是：将20w数据量的表和40w数据量的表进行关联并进行点茶查和范围筛选再聚合统计。
 
 ```shell
 SELECT count(*) 
@@ -154,4 +162,14 @@ WHERE title_basics.startyear = 2000 AND title_ratings.averagerating > 5;
 时间：1.626 ms
 ```
 
-​		可以观察到通过readyset代理查询在第一次查询是非常慢的，后续进行连续多次查询的耗时会急剧下降。
+​		可以观察直连数据库需要花费62.766ms；而到通过readyset代理在第一次查询是非常慢的，这主要是因为在冷启动情况下缓存需要加载数据进行预热，后续进行连续多次查询的耗时会急剧下降，甚至到微妙级别。
+
+
+
+# 二进制部署
+
+待补充......
+
+# 云原生部署
+
+待补充......
