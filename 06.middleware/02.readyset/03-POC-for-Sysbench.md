@@ -110,29 +110,29 @@ oltp_point_select prepare
 #### 3.1.4.1 oltp_point_select
 
 <div align=center>
-  <img src="./image/poc/sysbench/proxy-postgresql/oltp_point_select_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./image/poc/sysbench/proxy-postgresql/oltp_point_select_tp95.png" alt="tp95" style="zoom:29%;" /></div>
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_qps.png" alt="qps" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_tp95.png" alt="tp95" style="zoom:29%;" /></div>
 
 <div align=right></div>
 
 #### 3.1.4.2 oltp_read_only
 
 <div align=center>
-  <img src="./image/poc/sysbench/proxy-postgresql/oltp_read_only_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./image/poc/sysbench/proxy-postgresql/oltp_read_only_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_qps.png" alt="qps" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
 
 #### 3.1.4.3 select_random_points
 
 <div align=center>
-  <img src="./image/poc/sysbench/proxy-postgresql/select_random_points_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./image/poc/sysbench/proxy-postgresql/select_random_points_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_qps.png" alt="qps" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
 
 #### 3.1.4.4 select_random_ranges
 
 <div align=center>
-  <img src="./image/poc/sysbench/proxy-postgresql/select_random_ranges_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./image/poc/sysbench/proxy-postgresql/select_random_ranges_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_qps.png" alt="qps" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
 
