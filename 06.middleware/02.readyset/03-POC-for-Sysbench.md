@@ -44,7 +44,7 @@
 
 ### 3.1.2 数据集构造
 
-​		这里对postgres数据库中testdb这个数据库下的1张1000w数据量的表进行连续60s读请求压力测试，同时通过分别通过1个并发，4个并发以及8个并发分别进行实验以及相关数据记录。
+​		这里对postgres数据库中testdb这个数据库下的1张1000w数据量的表进行连续60s读请求压力测试，同时通过分别通过1个并发，4个并发以及8个并发分别进行实验以及相关数据记录，并且不讨论随着并发数增加到拐点情况下的性能表现。
 
 ```shell
 sysbench \
@@ -115,12 +115,26 @@ oltp_point_select prepare
 
 <div align=right></div>
 
+​		对于点查来说，当采用缓存服务代理上游数据库时，无论是QPS还是TP95指标都是碾压，那么基于数据库并且基于主键索引的点查本省就相对比较客观。随着并发数的增加，性能指标表现很好（本地测试由于环境受限，没有测试并发数的增加至拐点处的性能）。
+
 #### 3.1.4.2 oltp_read_only
 
 <div align=center>
   <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_qps.png" alt="qps" style="zoom:29%;" />
   <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
+
+​		该测试用例主要包括：基于主键点查，基于主键范围查询（连续区间），基于主键下的范围查询（连续区间）聚合，基于主键下的范围查询（连续区间）排序和去重。对于第一种在oltp_point_select上已经讨论过，这里主要讨论后三种，对于后三种情况来说都是基于`BETWEEN ? AND ?`，这种情况和select_random_ranges类似，但是不同的是属于单路类型的范围查询（连续区间）。
+
+​		对于ReadySet在当前`main`分支下的是不支持的，特别是这种`BETWEEN ? AND ?`查询。
+
+![main support-between-and-or-between-and-or](./assert/image/version/main/not-support-between-and.jpeg)
+
+​		但是在ReadySet的`beta-2023-07-26`release tag版本支持的，可以连接缓存服务执行此类请求，然后通过`show proxied queries`指令查询如下：
+
+![beta-2023-07-26 support-between-and](./assert/image/version/beta-2023-07-26/support-between-and.png)
+
+​		整体来说缓存服务下关键性能指标不及数据库自身，原因大致同select_random_ranges，可以参考《3.1.4.4 select_random_ranges》的分析。
 
 #### 3.1.4.3 select_random_points
 
@@ -129,6 +143,10 @@ oltp_point_select prepare
   <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
 
+​		该部分主要考察的是对离散型范围查询，对于数据库而言，基于索引的离散型范围查询来说，只要离散型数量至是少量的基本表现良好，当时并发数增加TP95下降比较明显。
+
+​		对于缓存服务来说，在单并发下表现不及数据库本身，特别是QPS相差较大；但是随着并发数的增加QPS基本可以持平，甚至表现稍好。在TP95方面同时逐步稍优于数据库本身，这主要是因为随着并发读请求的增加，不同查询之间的离散型点位可能会有重叠，会导致某些请求的数据本身就在内存中。理论上，如果内存足够大，内存驱逐发生概率越小，在缓存服务设置内存策略为lru的情况下，对于热点数据的访问效果会非常好。
+
 #### 3.1.4.4 select_random_ranges
 
 <div align=center>
@@ -136,3 +154,18 @@ oltp_point_select prepare
   <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_tp95.png" alt="tp95" style="zoom:29%;" />
 </div>
 
+​		对于“多路条件或”类型的范围查询（连续区间）对于ReadySet在当前`main`分支下的是不支持的，当时通过缓存服务执行请求时，在ReadySet服务日志会有如下异常：
+
+```shell
+2023-08-10T08:04:31.438064Z  INFO migration_handler:prepare_select{statement_id=0 create_if_not_exist=true override_schema_search_path=Some([Tiny("postgres"), Tiny("public")])}: readyset_adapter::backend::noria_connector: adding parameterized query query=SELECT count("k") FROM "sbtest1" WHERE "k" BETWEEN 140000 AND 140010 OR "k" BETWEEN 150000 AND 150000 name=q_661a060b3e34509d
+
+2023-08-10T08:04:31.441270Z ERROR migration_handler:prepare_select{statement_id=0 create_if_not_exist=true override_schema_search_path=Some([Tiny("postgres"), Tiny("public")])}: readyset_adapter::backend::noria_connector: add query failed error=Error during RPC (extend_recipe): Failed to plan migration: Operation unsupported: Creation of fully materialized query is forbidden
+```
+
+​		如果采用ReadySet的`beta-2023-07-26`release tag版本，是支持这种类似`BETWEEN ? AND ? OR BETWEEN ? AND ?`的查询。可以连接缓存服务执行此类请求，然后通过`show proxied queries`指令查询如下：
+
+![beta-2023-07-26 support-between-and-or-between-and-or](./assert/image/version/beta-2023-07-26/support-between-and-or-between-and-or.png)
+
+​		当时此类查询被缓存之后，会通过`show caches`命令发现查询的计划是`BETWEEN xxx AND xxx OR BETWEEN xxx AND xxx`，并不是我们所想的`BETWEEN ? AND ? OR BETWEEN ? AND ?`。这样的缺点是当每次执行“多路条件或”类型的范围查询（连续区间）时，这些连续区间如果都不是重合的话，会暂用大量的缓存数据；相反如果这些连续区间之间重合的多，缓存命中率自然也会越高，这增加了缓存指标的不确定性。
+
+​		所以在单并发下，缓存服务表现稍好。随着并发数的增加QPS较数据库呈现下降趋势，TP95较数据库呈现上升趋势，整体性能不及数据库。同时另外一方面缓存服务下平均访问延时较数据库反而异常不算太大。这也说明这种随机型的“多路条件或”类型的范围查询（连续区间）的用例对于缓存时不太友好的，因为该测试用例关注是随机性，而随机性越不确定想对于缓存命中率会有很大影响，所以这里更多关注平均访问延时。
