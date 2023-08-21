@@ -110,8 +110,9 @@ oltp_point_select prepare
 #### 3.1.4.1 oltp_point_select
 
 <div align=center>
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_tp95.png" alt="tp95" style="zoom:29%;" /></div>
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_point_select_tp95.png" alt="tp95" style="zoom:25%;" /></div>
+
 
 <div align=right></div>
 
@@ -120,9 +121,10 @@ oltp_point_select prepare
 #### 3.1.4.2 oltp_read_only
 
 <div align=center>
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/oltp_read_only_tp95.png" alt="tp95" style="zoom:25%;" />
 </div>
+
 
 ​		该测试用例主要包括：基于主键点查，基于主键范围查询（连续区间），基于主键下的范围查询（连续区间）聚合，基于主键下的范围查询（连续区间）排序和去重。对于第一种在oltp_point_select上已经讨论过，这里主要讨论后三种，对于后三种情况来说都是基于`BETWEEN ? AND ?`，这种情况和select_random_ranges类似，但是不同的是属于单路类型的范围查询（连续区间）。
 
@@ -139,21 +141,21 @@ oltp_point_select prepare
 #### 3.1.4.3 select_random_points
 
 <div align=center>
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_points_tp95.png" alt="tp95" style="zoom:25%;" />
 </div>
+
 
 ​		该部分主要考察的是对离散型范围查询，对于数据库而言，基于索引的离散型范围查询来说，只要离散型数量至是少量的基本表现良好，当时并发数增加TP95下降比较明显。
 
-​		对于缓存服务来说，在单并发下表现不及数据库本身，特别是QPS相差较大；但是随着并发数的增加QPS基本可以持平，甚至表现稍好。在TP95方面同时逐步稍优于数据库本身，这主要是因为随着并发读请求的增加，不同查询之间的离散型点位可能会有重叠，会导致某些请求的数据本身就在内存中。理论上，如果内存足够大，内存驱逐发生概率越小，在缓存服务设置内存策略为lru的情况下，对于热点数据的访问效果会非常好。
+​		对于缓存服务来说，在单并发下表现不及数据库本身，特别是TP95相差较大；但是随着并发数的增加QPS基本可以持平，甚至表现稍好。在TP95方面稍优于数据库本身，这主要是因为随着并发读请求的增加，不同查询之间的离散型点位可能会有重叠，会导致某些请求的数据本身就在内存中。理论上，如果内存足够大，内存驱逐发生概率越小，在缓存服务设置内存策略为lru的情况下，对于热点数据的访问效果会非常好。
 
 #### 3.1.4.4 select_random_ranges
 
 <div align=center>
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_qps.png" alt="qps" style="zoom:29%;" />
-  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_tp95.png" alt="tp95" style="zoom:29%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-postgresql/select_random_ranges_tp95.png" alt="tp95" style="zoom:25%;" />
 </div>
-
 ​		对于“多路条件或”类型的范围查询（连续区间）对于ReadySet在当前`main`分支下的是不支持的，当时通过缓存服务执行请求时，在ReadySet服务日志会有如下异常：
 
 ```shell
@@ -209,3 +211,121 @@ oltp_point_select prepare
 |                          | 8      | 234.34  | 56.84      |
 
 ​		数据表明方式压缩的结果下缓存服务各项指标相对数据库并没有优势，原因大概率来自容器间网络通信的损耗。
+
+## 3.2 代理Neon
+
+### 3.2.1 环境说明
+
+| 环境配置项目 | 关键信息                                                     | 备注                                                         |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 操作系统     | MacOS（2 GHz 双核Intel Core i5）                             |                                                              |
+| 内存         | 8G                                                           |                                                              |
+| 硬盘         | 250GB（HDD）                                                 |                                                              |
+| 数据库       | 非集群Neon（源码编译部署`release-3710`）                     | 开启binlog（通过Neon最高权限用户执行`ALTER SYSTEM SET wal_level = logical`） |
+| 代理服务     | ReadySet Server（源码编译部署`main`分支和`beta-2023-07-26`分支） | 内核参数设置：</br>query-caching=async（自关闭按需缓存，对自动化测试友好）</br>eviction-policy=lru（开启内存最近最小使用策略，减小内存不足下测试指标来回震荡） |
+| 网络环境     | 单节点本地                                                   |                                                              |
+
+### 3.2.2 数据集构造
+
+​	   这里对Neon数据库中postgres默认数据库下的1张1000w数据量的表进行连续60s读请求压力测试，同时通过分别通过1个并发，4个并发以及8个并发分别进行实验以及相关数据记录，并且不讨论随着并发数增加到拐点情况下的性能表现。
+
+```shell
+sysbench \
+--db-driver=pgsql \
+--time=60 \
+--threads=10 \
+--report-interval=1 \
+--pgsql-host=127.0.0.1 \
+--pgsql-port=55432 \
+--pgsql-user=cloud_admin \
+--pgsql-password=postgres \
+--pgsql-db=postgres \
+--tables=1 \
+--table_size=10000000 \
+--db-ps-mode=disable \
+oltp_point_select prepare
+```
+
+​		这里在数据准备阶段采用oltp_point_select进行数据初始化，因为第二章《**测试方案构造**》中涉及的4种测试用例构造的表结构都是相同的。
+
+### 3.2.3 测试实验和数据记录
+
+​		压测上游数据库服务结果如下：
+
+| Test Point               | Thread | QPS     | TP95（ms） | TP50（ms） |
+| ------------------------ | ------ | ------- | ---------- | ---------- |
+| **oltp_point_select**    | 1      | 928.05  | 2.91       | -          |
+|                          | 4      | 2260.42 | 3.82       | -          |
+|                          | 8      | 2471.69 | 6.67       | -          |
+| **oltp_read_only**       | 1      | 791.12  | 33.72      | -          |
+|                          | 4      | 1703.17 | 54.83      | -          |
+|                          | 8      | 2111.97 | 92.42      | -          |
+| **select_random_points** | 1      | 2.15    | 580.02     | -          |
+|                          | 4      | 3211.95 | 5.09       | -          |
+|                          | 8      | 3009.27 | 9.91       | -          |
+| **select_random_ranges** | 1      | 0.43    | 3040.14    | -          |
+|                          | 4      | 1003.23 | 21.50      | -          |
+|                          | 8      | 889.82  | 39.65      | -          |
+
+​		压测代理服务结果如下：
+
+| Test Point               | Thread | QPS     | TP95（ms） | TP50（ms） |
+| ------------------------ | ------ | ------- | ---------- | ---------- |
+| **oltp_point_select**    | 1      | 2186.48 | 1.10       | -          |
+|                          | 4      | 3630.49 | 2.30       | -          |
+|                          | 8      | 5013.97 | 2.86       | -          |
+| **oltp_read_only**       | 1      | 385.01  | 227.40     | 41.55      |
+|                          | 4      | 1375.90 | 56.84      | 46.49      |
+|                          | 8      | 1883.58 | 97.55      | 67.90      |
+| **select_random_points** | 1      | 6.70    | 363.18     | -          |
+|                          | 4      | 1632.23 | 3.68       | -          |
+|                          | 8      | 1691.97 | 7.56       | -          |
+| **select_random_ranges** | 1      | 12.71   | 179.94     | 78.68      |
+|                          | 4      | 1524.88 | 4.25       | 2.62       |
+|                          | 8      | 1657.66 | 7.84       | 4.82       |
+
+### 3.2.4 测试结果解读和分析
+
+为了使每个测试用例的具有相对的泛化性，减少资源因素下偶然性，需要在每个测试点位下多运行几次之后然后去除相对极端情况下的数据，这对于直接压测数据库本身还好，只要保证资源因素相对稳定。
+
+​		对于缓存服务来说因为其本身具有内存敏感性，在冷启动下缓存数据需要进行“热身”，所以需要对这种结果进行消除，尽可能多次运行测试点位，在运行点位前后保证环境因素的相对稳定，可以让测试结果保持一定的客观性。
+
+#### 3.2.4.1 oltp_point_select
+
+<div align=center>
+  <img src="./assert/image/poc/sysbench/proxy-neon/oltp_point_select_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-neon/oltp_point_select_tp95.png" alt="tp95" style="zoom:25%;" />
+</div>
+
+  	 对于点查来说，当采用缓存服务代理上游数据库时，无论是QPS还是TP95指标都是碾压。
+
+#### 3.2.4.2 oltp_read_only
+
+<div align=center>
+  <img src="./assert/image/poc/sysbench/proxy-neon/oltp_read_only_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-neon/oltp_read_only_tp95.png" alt="tp95" style="zoom:25%;" />
+</div>
+
+​	    该测试用例主要包括：基于主键点查，基于主键范围查询（连续区间），基于主键下的范围查询（连续区间）聚合，基于主键下的范围查询（连续区间）排序和去重。对于第一种在oltp_point_select已经讨论过，这里主要讨论后三种，对于后三种情况来说都是基于`BETWEEN ? AND ?`，这种情况和select_random_ranges类似，但是不同的是属于单路类型的范围查询（连续区间）。
+
+​		整体来说缓存服务下关键性能指标不及数据库自身，原因大致同select_random_ranges，可以参考《3.1.4.4 select_random_ranges》的分析，在QPS上不及数据库自身，TP95延时随着并发数的增减相差不大。
+
+#### 3.2.4.3 select_random_points
+
+<div align=center>
+  <img src="./assert/image/poc/sysbench/proxy-neon/select_random_points_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-neon/select_random_points_tp95.png" alt="tp95" style="zoom:25%;" />
+</div>
+
+​	    该部分主要考察的是对离散型范围查询，对于数据库而言，基于索引的离散型范围查询来说，只要离散型数量至是少量的基本表现良好，当时并发数增加TP95下降比较明显。
+
+​		对于缓存服务来说，在单并发下表现不及数据库本身，特别是TP95相差较大，同时随着并发数的增加QPS叫数据库自身有一定差距。在TP95方面稍优于数据库本身。
+
+#### 3.2.4.4 select_random_ranges
+
+<div align=center>
+  <img src="./assert/image/poc/sysbench/proxy-neon/select_random_ranges_qps.png" alt="qps" style="zoom:25%;" />
+  <img src="./assert/image/poc/sysbench/proxy-neon/select_random_ranges_tp95.png" alt="tp95" style="zoom:25%;" />
+</div>
+
+​		对于“多路条件或”类型的范围查询（连续区间）针对ReadySet在当前`main`分支下的是不支持的，但是`beta-2023-07-26`分支是支持的。总体来说，当采用缓存服务代理上游数据库时，无论是QPS还是TP95指标都是碾压。
