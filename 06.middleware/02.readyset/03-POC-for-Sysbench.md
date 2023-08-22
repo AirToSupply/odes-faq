@@ -296,8 +296,9 @@ oltp_point_select prepare
   <img src="./assert/image/poc/sysbench/proxy-neon/oltp_point_select_qps.png" alt="qps" style="zoom:25%;" />
   <img src="./assert/image/poc/sysbench/proxy-neon/oltp_point_select_tp95.png" alt="tp95" style="zoom:25%;" />
 </div>
+  	 
 
-  	 对于点查来说，当采用缓存服务代理上游数据库时，无论是QPS还是TP95指标都是碾压。
+​		对于点查来说，当采用缓存服务代理上游数据库时，无论是QPS还是TP95指标都是碾压。
 
 #### 3.2.4.2 oltp_read_only
 
