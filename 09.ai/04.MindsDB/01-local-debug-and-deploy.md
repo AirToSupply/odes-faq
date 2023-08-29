@@ -130,7 +130,11 @@ self._default_config = {
 
 ​		
 
-​		成功启动之后，可以访问`http://127.0.0.1:47334/`进入MindsDB控制台。
+​		成功启动之后，可以访问`http://127.0.0.1:47334/`进入MindsDB控制台，就像下面这个样子：
+
+![mindsdb-web-console](./image/mindsdb-web-console.png)
+
+​		
 
 ​		另外一方面，可以通过数据库客户端连接服务端，这里采用psql尝试连接：
 
@@ -162,7 +166,7 @@ mindsdb=> show full databases;
 
 # 演示案例
 
-​		MindDB可以集成非常的数据源，这里为方便起见，采用MindDB Web控制台文件上传的功能准备训练数据集。点击左上角【Add】->【Upload File】，点击【Import a file】上传数据集，【Datasource name】填写数据集的名称。
+​		MindDB可以集成非常多的数据源，为了方便起见，这里采用MindsDB Web控制台文件上传的功能准备训练数据集。点击左上角【Add】->【Upload File】，点击【Import a file】上传数据集，【Datasource name】填写数据集的名称。
 
 ​		通过文件上传的数据集会自动进入到MindsDB的files这个catalog下：
 
