@@ -100,3 +100,142 @@ mindsdb=> show full databases;
 ```
 
 ​		至此安装部署成功！
+
+
+
+# 演示案例
+
+​		MindDB可以集成非常的数据源，这里为方便起见，采用MindDB Web控制台文件上传的功能准备训练数据集。点击左上角【Add】->【Upload File】，点击【Import a file】上传数据集，【Datasource name】填写数据集的名称。
+
+​		通过文件上传的数据集会自动进入到MindsDB的files这个catalog下：
+
+```shell
+mindsdb=> show full databases;
+      Database      |  TYPE   | ENGINE
+--------------------+---------+--------
+ information_schema | system  |
+ mindsdb            | project |
+ files              | data    | files
+ web                | data    | web
+(4 rows)
+
+mindsdb=> use files;
+use
+mindsdb=> show full tables;
+ Tables_in_files | Table_type
+-----------------+------------
+ home_rentals    | BASE TABLE
+ customer_churn  | BASE TABLE
+(2 rows)
+```
+
+
+
+## 回归任务
+
+​		数据集：[home-rentals](./data/home-rentals)
+
+​		数据解释：[home rentals understanding](https://docs.mindsdb.com/sql/tutorials/home-rentals#understanding-the-data)
+
+​	【步骤一】探查数据。
+
+```sql
+SELECT * FROM files.home_rentals limit 10;
+```
+
+```shell
+ number_of_rooms | number_of_bathrooms | sqft | location | days_on_market |  neighborhood  | rental_price
+-----------------+---------------------+------+----------+----------------+----------------+--------------
+ 2               | 1                   | 917  | great    | 13             | berkeley_hills | 3901
+ 0               | 1                   | 194  | great    | 10             | berkeley_hills | 2042
+ 1               | 1                   | 543  | poor     | 18             | westbrae       | 1871
+ 2               | 1                   | 503  | good     | 10             | downtown       | 3026
+ 3               | 2                   | 1066 | good     | 13             | thowsand_oaks  | 4774
+ 3               | 2                   | 816  | poor     | 25             | westbrae       | 4382
+ 0               | 1                   | 461  | great    | 6              | berkeley_hills | 2269
+ 1               | 1                   | 333  | great    | 6              | south_side     | 2284
+ 3               | 2                   | 1124 | great    | 9              | south_side     | 5420
+ 3               | 2                   | 1204 | good     | 7              | downtown       | 5016
+(10 rows)
+```
+
+​	【步骤二】训练数据生成模型。
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM files
+  (SELECT * FROM home_rentals)
+PREDICT rental_price;
+```
+
+​	【步骤三】查看模型。
+
+```sql
+-- 方法一
+DESCRIBE mindsdb.home_rentals_model;
+
+-- 方法二
+SHOW MODELS
+FROM mindsdb
+LIKE 'home_rentals_model';
+-- WHERE status = 'complete';
+
+-- 方法三
+SELECT * FROM mindsdb.models where name = 'home_rentals_model';
+```
+
+```shell
+        NAME        |  ENGINE   | PROJECT | VERSION |  STATUS  | ACCURACY |   PREDICT    | UPDATE_STATUS | MINDSDB_VERSION | ERROR |     SELECT_DATA_QUERY      |      TRAINING_OPTIONS      | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT | TRAINING_TIME
+--------------------+-----------+---------+---------+----------+----------+--------------+---------------+-----------------+-------+----------------------------+----------------------------+------------------------+-----------------------+---------------------+-----+------------+---------------
+ home_rentals_model | lightwood | mindsdb | 1       | complete | 0.999    | rental_price | up_to_date    | 23.8.3.0        |       | SELECT * FROM home_rentals | {'target': 'rental_price'} | 5                      | 5                     | Complete            |     | 2023-08-29 | 3.514
+(1 row)
+```
+
+​		还可以通过如下方法，快速查看模型具体信息。
+
+```sql
+describe mindsdb.home_rentals_model.info;
+describe mindsdb.home_rentals_model.features;
+describe mindsdb.home_rentals_model.model;
+describe mindsdb.home_rentals_model.jsonai;
+```
+
+​	【步骤四】模型预测（单条）。
+
+```sql
+SELECT 
+  rental_price,
+  rental_price_explain
+FROM mindsdb.home_rentals_model
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
+
+```shell
+ rental_price |                                                             rental_price_explain
+--------------+-----------------------------------------------------------------------------------------------------------------------------------------------
+ 6583         | {"predicted_value": 6583, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 6487, "confidence_upper_bound": 6679}
+(1 row)
+```
+
+​	【步骤五】模型预测（批量）。
+
+```sql
+SELECT
+  d.rental_price as y,
+  m.rental_price as y_head,
+  m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN files.home_rentals AS d;
+```
+
+
+
+## 分类任务
+
+​		数据集：[customer-churn](./data/customer-churn)
+
+​		数据解释：[customer churn understanding](https://docs.mindsdb.com/sql/tutorials/customer-churn#understanding-the-data)
+
+​	【todo】
+
