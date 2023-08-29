@@ -63,22 +63,79 @@ python setup.py develop
 export MINDSDB_STORAGE_DIR=/tmp/mindsdb && python -m mindsdb --api http,postgres
 ```
 
-​		MINDSDB_STORAGE_DIR为指定MindsDB的存储路径，更多的配置参数可以参考：[Environment Variables](https://docs.mindsdb.com/setup/environment-vars)。
+【注意】		
 
-​        --api参数指定对外服务暴露的方式，这里指定http代表会打开web控制台，指定postgres则可以通过psql客户端工具进行访问。
+​	（1）MINDSDB_STORAGE_DIR为指定MindsDB的存储路径，更多的配置参数可以参考：[Environment Variables](https://docs.mindsdb.com/setup/environment-vars)。
+
+​    （2） `--api`参数指定对外服务暴露的方式，这里指定http代表会打开web控制台，指定postgres则可以通过psql客户端工具进行访问。默认情况下是：`--api=http,mysql`。
+
+​	（3）`--config`用来指定启动MindsDB服务所需要的配置文件。默认不配置的情况下，可以参考源码：mindsdb/utilities/config.py#93，大致配置如下：
+
+```python
+# ...
+api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
+self._default_config = {
+  'permanent_storage': {
+    'location': 'local'
+  },
+  'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
+  'paths': paths,
+  'auth': {
+    'http_auth_enabled': False,
+    'username': 'mindsdb',
+    'password': ''
+  },
+  "log": {
+    "level": {
+      "console": "INFO",
+      "file": "DEBUG",
+      "db": "WARNING"
+    }
+  },
+  "gui": {
+    "autoupdate": True
+  },
+  "debug": False,
+  "environment": "local",
+  "integrations": {},
+  "api": {
+    "http": {
+      "host": api_host,
+      "port": "47334"
+    },
+    "mysql": {
+      "host": api_host,
+      "password": "",
+      "port": "47335",
+      "database": "mindsdb",
+      "ssl": True
+    },
+    "mongodb": {
+      "host": api_host,
+      "port": "47336",
+      "database": "mindsdb"
+    },
+    "postgres": {
+      "host": api_host,
+      "port": "55432",
+      "database": "mindsdb"
+    }
+  },
+  "cache": {
+    "type": "local"
+  }
+}
+# ...
+```
+
+​		
 
 ​		成功启动之后，可以访问`http://127.0.0.1:47334/`进入MindsDB控制台。
 
-​		另外一方面，可以通过数据库客户端连接服务端：
+​		另外一方面，可以通过数据库客户端连接服务端，这里采用psql尝试连接：
 
 ```shell
 > psql -h localhost -p 55432 -d mindsdb -U mindsdb
-
-mindsdb=> select version();
- version
----------
- 8.0.17
-(1 row)
 
 mindsdb=> show databases;
       Database
@@ -237,5 +294,104 @@ JOIN files.home_rentals AS d;
 
 ​		数据解释：[customer churn understanding](https://docs.mindsdb.com/sql/tutorials/customer-churn#understanding-the-data)
 
-​	【todo】
+​	【步骤一】探查数据。
+
+```sql
+SELECT * FROM files.customer_churn LIMIT 10;
+```
+
+```shell
+ customerid | gender | seniorcitizen | partner | dependents | tenure | phoneservice |  multiplelines   | internetservice | onlinesecurity | onlinebackup | deviceprotection | techsupport | streamingtv | streamingmovies |    contract    | paperlessbilling |       paymentmethod       | monthlycharges | totalcharges | churn
+------------+--------+---------------+---------+------------+--------+--------------+------------------+-----------------+----------------+--------------+------------------+-------------+-------------+-----------------+----------------+------------------+---------------------------+----------------+--------------+-------
+ 7590-VHVEG | Female | 0             | Yes     | No         | 1      | No           | No phone service | DSL             | No             | Yes          | No               | No          | No          | No              | Month-to-month | Yes              | Electronic check          | $29.85         | $29.85       | No
+ 5575-GNVDE | Male   | 0             | No      | No         | 34     | Yes          | No               | DSL             | Yes            | No           | Yes              | No          | No          | No              | One year       | No               | Mailed check              | $56.95         | $1,889.50    | No
+ 3668-QPYBK | Male   | 0             | No      | No         | 2      | Yes          | No               | DSL             | Yes            | Yes          | No               | No          | No          | No              | Month-to-month | Yes              | Mailed check              | $53.85         | $108.15      | Yes
+ 7795-CFOCW | Male   | 0             | No      | No         | 45     | No           | No phone service | DSL             | Yes            | No           | Yes              | Yes         | No          | No              | One year       | No               | Bank transfer (automatic) | $42.30         | $1,840.75    | No
+ 9237-HQITU | Female | 0             | No      | No         | 2      | Yes          | No               | Fiber optic     | No             | No           | No               | No          | No          | No              | Month-to-month | Yes              | Electronic check          | $70.70         | $151.65      | Yes
+ 9305-CDSKC | Female | 0             | No      | No         | 8      | Yes          | Yes              | Fiber optic     | No             | No           | Yes              | No          | Yes         | Yes             | Month-to-month | Yes              | Electronic check          | $99.65         | $820.50      | Yes
+ 1452-KIOVK | Male   | 0             | No      | Yes        | 22     | Yes          | Yes              | Fiber optic     | No             | Yes          | No               | No          | Yes         | No              | Month-to-month | Yes              | Credit card (automatic)   | $89.10         | $1,949.40    | No
+ 6713-OKOMC | Female | 0             | No      | No         | 10     | No           | No phone service | DSL             | Yes            | No           | No               | No          | No          | No              | Month-to-month | No               | Mailed check              | $29.75         | $301.90      | No
+ 7892-POOKP | Female | 0             | Yes     | No         | 28     | Yes          | Yes              | Fiber optic     | No             | No           | Yes              | Yes         | Yes         | Yes             | Month-to-month | Yes              | Electronic check          | $104.80        | $3,046.05    | Yes
+ 6388-TABGU | Male   | 0             | No      | Yes        | 62     | Yes          | No               | DSL             | Yes            | Yes          | No               | No          | No          | No              | One year       | No               | Bank transfer (automatic) | $56.15         | $3,487.95    | No
+(10 rows)
+```
+
+​	【步骤二】模型训练。
+
+```sql
+CREATE MODEL mindsdb.customer_churn_predictor
+FROM files
+  (SELECT * FROM customer_churn)
+PREDICT churn;
+```
+
+​	【步骤三】查看模型。
+
+```sql
+DESCRIBE mindsdb.customer_churn_predictor;
+```
+
+```shell
+           NAME           |  ENGINE   | PROJECT | ACTIVE | VERSION |   STATUS   | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR |      SELECT_DATA_QUERY       |  TRAINING_OPTIONS   | TAG
+--------------------------+-----------+---------+--------+---------+------------+----------+---------+---------------+-----------------+-------+------------------------------+---------------------+-----
+ customer_churn_predictor | lightwood | mindsdb | true   | 1       | generating |          | churn   | up_to_date    | 23.8.3.0        |       | SELECT * FROM customer_churn | {'target': 'churn'} |
+(1 row)
+```
+
+​	【步骤四】模型预测（单条）。
+
+```sql
+SELECT churn, churn_confidence, churn_explain
+FROM mindsdb.customer_churn_predictor
+WHERE seniorcitizen=0
+AND partner='Yes'
+AND dependents='No'
+AND tenure=1
+AND phoneservice='No'
+AND multiplelines='No phone service'
+AND internetservice='DSL'
+AND contract='Month-to-month'
+AND monthlycharges=29.85
+AND totalcharges=29.85
+AND onlinebackup='Yes'
+AND onlinesecurity='No'
+AND deviceprotection='No'
+AND techsupport='No'
+AND streamingtv='No'
+AND streamingmovies='No'
+AND paperlessbilling='Yes'
+AND paymentmethod='Electronic check';
+```
+
+```shell
+ churn |  churn_confidence  |                                                                        churn_explain
+-------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ No    | 0.3465346534653465 | {"predicted_value": "No", "confidence": 0.3465346534653465, "anomaly": null, "truth": null, "probability_class_No": 0.5917, "probability_class_Yes": 0.4083}
+(1 row)
+```
+
+​	【步骤五】模型预测（批量）。
+
+```sql
+SELECT 
+  t.customerid, 
+  t.contract, 
+  t.monthlycharges, 
+  t.churn as y, 
+  m.churn as y_predict,
+  m.churn_confidence
+FROM mindsdb.customer_churn_predictor AS m
+JOIN files.customer_churn AS t
+LIMIT 5;
+```
+
+```shell
+ customerid |    contract    | monthlycharges |  y  | y_predict |   churn_confidence
+------------+----------------+----------------+-----+-----------+----------------------
+ 7795-CFOCW | One year       | $42.30         | No  | No        | 0.6534653465346535
+ 6388-TABGU | One year       | $56.15         | No  | No        | 0.801980198019802
+ 7469-LKBCI | Two year       | $18.95         | No  | No        | 0.8217821782178217
+ 3655-SNQYZ | Two year       | $113.25        | No  | No        | 0.7524752475247525
+ 8191-XWSZG | One year       | $20.65         | No  | No        | 0.8217821782178217
+```
 
