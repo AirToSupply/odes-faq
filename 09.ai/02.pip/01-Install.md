@@ -13,7 +13,7 @@ conda install pip && conda update pip
 ​		可以在【channel URLs】选项中看到当前采用的默认下载源。这里需要配置为清华的Tuna镜像源，执行如下命令：
 
 ```shell
-mdkir ~/.pip && vim ~/.pip/pip.conf
+mkdir ~/.pip && vim ~/.pip/pip.conf
 ```
 
 ​		然后配置如下命令：
