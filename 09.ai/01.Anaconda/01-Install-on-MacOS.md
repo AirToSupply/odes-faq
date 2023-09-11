@@ -148,7 +148,7 @@ dev                   *  /Users/ll/soft/Anaconda/anaconda3/envs/dev
 （3）创建虚拟环境。例如：常见一个基于python3.7版本的名称为dev的虚拟环境。
 
 ```shell
-conda create -n dev python=3.7
+conda create -n dev python=3.8
 ```
 
 （4）激活虚拟环境。例如：激活名称为dev的虚拟环境，激活之后会看到命令提示符变为“(dev)”。
