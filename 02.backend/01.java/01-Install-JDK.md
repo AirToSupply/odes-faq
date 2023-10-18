@@ -36,4 +36,4 @@ java -version
 
 # 附录
 
-​	（1）如果需要安装openjdk，可以参考：[Archived OpenJDK General-Availability Releases](https://jdk.java.net/archive/)
+​	下载JDK，可以参考：[Java SE 17 Archive Downloads](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
