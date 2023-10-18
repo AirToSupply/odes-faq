@@ -1,3 +1,5 @@
+# 安装
+
 （1）解压安装包
 
 ```shell
@@ -30,3 +32,8 @@ source ~/.bashrc
 java -version
 ```
 
+
+
+# 附录
+
+​	下载JDK，可以参考：[Java SE 17 Archive Downloads](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)

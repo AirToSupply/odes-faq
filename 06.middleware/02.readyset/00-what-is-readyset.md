@@ -20,3 +20,5 @@
 [Noria paper](https://jon.tsp.io/papers/osdi18-noria.pdf)
 
 [Fast Materialized Views for Fast Websites (Malte Schwarzkopf)](https://www.youtube.com/watch?v=kVv9Pik6QGY)
+
+
