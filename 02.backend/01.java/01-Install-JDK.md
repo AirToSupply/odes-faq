@@ -1,3 +1,5 @@
+# 安装
+
 （1）解压安装包
 
 ```shell
@@ -30,3 +32,8 @@ source ~/.bashrc
 java -version
 ```
 
+
+
+# 附录
+
+​	（1）如果需要安装openjdk，可以参考：[Archived OpenJDK General-Availability Releases](https://jdk.java.net/archive/)
