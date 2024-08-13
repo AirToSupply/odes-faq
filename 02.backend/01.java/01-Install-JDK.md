@@ -36,4 +36,8 @@ java -version
 
 # 附录
 
-​	下载JDK，可以参考：[Java SE 17 Archive Downloads](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+​	（1）下载JDK17，可参考：[Java SE 17 Archive Downloads](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)。
+
+​	（2）下载JDK8，可参考：[java8 Mac Archive Downloads](https://www.oracle.com/java/technologies/downloads/#java8-mac)。
+
+​	（3）下载其他JDK，可参考：[wlei0618](https://blog.csdn.net/wlei0618/article/details/126861940)。
